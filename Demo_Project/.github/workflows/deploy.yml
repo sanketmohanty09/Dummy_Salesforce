@@ -1,1 +1,31 @@
+name: Deploy to Salesforce Org
+on:
+  push:
+    branches:
+      - main  # Adjust this to your main branch name
 
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Salesforce CLI
+        run: |
+          wget https://developer.salesforce.com/media/salesforce-cli/sfdx/channels/stable/sfdx-linux-x64.tar.xz
+          mkdir sfdx
+          tar xJf sfdx-linux-x64.tar.xz -C sfdx --strip-components 1
+          sudo ./sfdx/install
+          sfdx --version
+
+      - name: Authenticate with Salesforce Org
+        run: |
+          echo "Authenticating with Salesforce Org..."
+          sfdx force:auth:jwt:grant --clientid ${{ secrets.SALESFORCE_CLIENT_ID }} --jwtkeyfile server.key --username ${{ secrets.SALESFORCE_USERNAME }} --setdefaultdevhubusername -a DevHub || { echo "Authentication failed."; exit 1; }
+          sfdx force:auth:jwt:grant --clientid ${{ secrets.SALESFORCE_CLIENT_ID }} --jwtkeyfile server.key --username ${{ secrets.SALESFORCE_USERNAME }} -a MyOrg || { echo "Authentication failed."; exit 1; }
+
+      - name: Deploy to Salesforce Org
+        run: |
+          echo "Deploying to Salesforce Org..."
+          sfdx force:source:deploy -p force-app/main/default || { echo "Deployment failed."; exit 1; }
